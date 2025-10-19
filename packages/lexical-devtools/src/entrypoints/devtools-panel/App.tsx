@@ -20,8 +20,7 @@ import {
 import * as React from 'react';
 import {useState} from 'react';
 
-import lexicalLogo from '@/public/lexical.svg';
-
+import lexicalLogo from '../../../public/lexical.svg';
 import EditorsRefreshCTA from '../../components/EditorsRefreshCTA';
 import {useExtensionStore} from '../../store';
 import {EditorInspectorButton} from './components/EditorInspectorButton';
