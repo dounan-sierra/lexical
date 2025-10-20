@@ -6,7 +6,7 @@
  *
  */
 
-import {generateContent, LexicalCommandLog} from '@lexical/devtools-core';
+import {generateContent, LexicalCommandLog,toEditorStateJSON} from '@lexical/devtools-core';
 import {IPegasusRPCService, PegasusRPCMessage} from '@webext-pegasus/rpc';
 import {LexicalEditor} from 'lexical';
 import {StoreApi} from 'zustand';
@@ -69,6 +69,17 @@ export class InjectedPegasusService
 
     return readEditorState(editor, editor.getEditorState(), () =>
       generateContent(editor, this.commandLog.get(editor) ?? [], exportDOM),
+    );
+  }
+
+  getEditorStateJSON(_message: PegasusRPCMessage, editorKey: string): string {
+    const editor = queryLexicalEditorByKey(editorKey);
+    if (editor == null) {
+      throw new Error(`Can't find editor with key: ${editorKey}`);
+    }
+
+    return readEditorState(editor, editor.getEditorState(), () =>
+      JSON.stringify(toEditorStateJSON(editor)),
     );
   }
 

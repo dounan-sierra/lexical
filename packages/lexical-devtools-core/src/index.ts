@@ -7,5 +7,6 @@
  */
 
 export * from './generateContent';
+export * from './toEditorStateJSON';
 export * from './TreeView';
 export * from './useLexicalCommandsLog';

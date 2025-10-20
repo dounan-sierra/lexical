@@ -20,7 +20,6 @@ import {
 } from '@chakra-ui/react';
 import {TreeView} from '@lexical/devtools-core';
 import {getRPCService} from '@webext-pegasus/rpc';
-import * as React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {useExtensionStore} from '../../../store';
@@ -102,6 +101,9 @@ export function EditorsList({tabID, setErrorMessage}: Props) {
                 injectedPegasusService
                   .setEditorState(key, editorState as SerializedRawEditorState)
                   .catch((e) => setErrorMessage(e.stack))
+              }
+              getEditorStateJSON={() =>
+                injectedPegasusService.getEditorStateJSON(key)
               }
               generateContent={(exportDOM) =>
                 injectedPegasusService.generateTreeViewContent(key, exportDOM)

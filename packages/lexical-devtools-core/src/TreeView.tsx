@@ -7,13 +7,14 @@
  */
 
 import type {LexicalCommandLog} from './useLexicalCommandsLog';
-import type {EditorSetOptions, EditorState} from 'lexical';
 import type {JSX} from 'react';
 
+import {type EditorSetOptions, type EditorState} from 'lexical';
 import * as React from 'react';
 import {forwardRef, useCallback, useEffect, useRef, useState} from 'react';
 
 const LARGE_EDITOR_STATE_SIZE = 1000;
+const DEFAULT_COMMANDS_LOG: LexicalCommandLog = [];
 
 export const TreeView = forwardRef<
   HTMLPreElement,
@@ -25,6 +26,7 @@ export const TreeView = forwardRef<
     timeTravelPanelClassName?: string;
     timeTravelPanelSliderClassName?: string;
     viewClassName?: string;
+    getEditorStateJSON: () => Promise<string>;
     generateContent: (exportDOM: boolean) => Promise<string>;
     setEditorState: (state: EditorState, options?: EditorSetOptions) => void;
     setEditorReadOnly: (isReadonly: boolean) => void;
@@ -41,8 +43,9 @@ export const TreeView = forwardRef<
     editorState,
     setEditorState,
     setEditorReadOnly,
+    getEditorStateJSON,
     generateContent,
-    commandsLog = [],
+    commandsLog = DEFAULT_COMMANDS_LOG,
   },
   ref,
 ): JSX.Element {
@@ -50,6 +53,9 @@ export const TreeView = forwardRef<
     Array<[number, EditorState]>
   >([]);
   const [content, setContent] = useState<string>('');
+  const [serializedEditorState, setSerializedEditorState] = useState<
+    {[key: string]: unknown} | undefined
+  >(undefined);
   const [timeTravelEnabled, setTimeTravelEnabled] = useState(false);
   const [showExportDOM, setShowExportDOM] = useState(false);
   const playingIndexRef = useRef(0);
@@ -58,12 +64,25 @@ export const TreeView = forwardRef<
   const [isLimited, setIsLimited] = useState(false);
   const [showLimited, setShowLimited] = useState(false);
   const lastEditorStateRef = useRef<null | EditorState>(null);
-  const lastCommandsLogRef = useRef<LexicalCommandLog>([]);
+  const lastCommandsLogRef = useRef<LexicalCommandLog>(commandsLog);
   const lastGenerationID = useRef(0);
 
   const generateTree = useCallback(
     (exportDOM: boolean) => {
       const myID = ++lastGenerationID.current;
+      getEditorStateJSON()
+        .then((json) => {
+          if (myID === lastGenerationID.current) {
+            setSerializedEditorState(JSON.parse(json));
+          }
+        })
+        .catch((err) => {
+          if (myID === lastGenerationID.current) {
+            setContent(
+              `Error rendering editor state: ${err.message}\n\nStack:\n${err.stack}`,
+            );
+          }
+        });
       generateContent(exportDOM)
         .then((treeText) => {
           if (myID === lastGenerationID.current) {
@@ -78,7 +97,7 @@ export const TreeView = forwardRef<
           }
         });
     },
-    [generateContent],
+    [generateContent, getEditorStateJSON],
   );
 
   useEffect(() => {
@@ -207,6 +226,9 @@ export const TreeView = forwardRef<
             Time Travel
           </button>
         )}
+      {(showLimited || !isLimited) && serializedEditorState && (
+        <EditorStateTree serializedEditorState={serializedEditorState} />
+      )}
       {(showLimited || !isLimited) && <pre ref={ref}>{content}</pre>}
       {timeTravelEnabled && (showLimited || !isLimited) && (
         <div className={timeTravelPanelClassName}>
@@ -262,3 +284,138 @@ export const TreeView = forwardRef<
     </div>
   );
 });
+
+type SerializedNode = {
+  type: string;
+  children?: [SerializedNode];
+  [key: string]: unknown;
+};
+
+function isSerializedNode(obj: unknown): obj is SerializedNode {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'type' in obj &&
+    typeof obj.type === 'string'
+  );
+}
+
+function EditorStateTree({
+  serializedEditorState,
+}: {
+  serializedEditorState: {[key: string]: unknown};
+}): JSX.Element {
+  const rootNode = serializedEditorState.root;
+
+  // Use the type guard to refine the type
+  if (!isSerializedNode(rootNode)) {
+    return (
+      <div style={{color: '#888', padding: '10px'}}>
+        No editor state available
+        {typeof serializedEditorState}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        backgroundColor: '#1e1e1e',
+        borderTop: '1px solid #444',
+        color: '#d4d4d4',
+        fontFamily: 'Consolas, "Courier New", monospace',
+        fontSize: '13px',
+        marginTop: '10px',
+        padding: '10px',
+      }}>
+      <div
+        style={{
+          color: '#999',
+          fontSize: '12px',
+          letterSpacing: '0.5px',
+          marginBottom: '8px',
+          textTransform: 'uppercase',
+        }}>
+        Editor State Tree
+      </div>
+      <TreeNode node={rootNode} />
+    </div>
+  );
+}
+
+function TreeNode({
+  node,
+  depth = 0,
+}: {
+  node: SerializedNode;
+  depth?: number;
+}): JSX.Element {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const hasChildren =
+    Boolean(node.children) &&
+    Array.isArray(node.children) &&
+    node.children.length > 0;
+  const indentSize = 16; // pixels per indent level
+
+  const handleClick = () => {
+    if (hasChildren) {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
+  return (
+    <div>
+      <div
+        onClick={handleClick}
+        style={{
+          alignItems: 'center',
+          backgroundColor: 'transparent',
+          cursor: hasChildren ? 'pointer' : 'default',
+          display: 'flex',
+          paddingLeft: `${depth * indentSize}px`,
+          transition: 'background-color 0.1s',
+          userSelect: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}>
+        {hasChildren && (
+          <span
+            style={{
+              color: '#888',
+              display: 'inline-block',
+              fontSize: '10px',
+              marginRight: '4px',
+              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform 0.15s',
+            }}>
+            ▶
+          </span>
+        )}
+        {!hasChildren && (
+          <span
+            style={{display: 'inline-block', marginRight: '4px', width: '10px'}}
+          />
+        )}
+        <span
+          style={{
+            color: '#9cdcfe',
+            fontFamily: 'Consolas, "Courier New", monospace',
+            fontSize: '13px',
+          }}>
+          {node.type || 'unknown'}
+        </span>
+      </div>
+      {isExpanded && hasChildren && (
+        <div>
+          {node.children!.map((child, index) => (
+            <TreeNode key={index} node={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
