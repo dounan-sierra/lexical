@@ -6,27 +6,87 @@
  *
  */
 
+/* Scrollbar styling - Light mode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdc1c6;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9aa0a6;
+}
+
+/* Support for Firefox - Light mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #bdc1c6 #f8f9fa;
+}
+
+/* Dark mode scrollbar styling */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: #292a2d;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #5f6368;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #80868b;
+  }
+
+  /* Firefox dark mode */
+  * {
+    scrollbar-color: #5f6368 #292a2d;
+  }
+}
+
+/* Light mode defaults */
 pre {
-  line-height: 1.1;
-  background: #222;
-  color: #fff;
+  line-height: 1.4;
+  background: #ffffff;
+  color: #202124;
   margin: 0;
-  padding: 10px;
-  font-size: 12px;
+  padding: 8px;
   overflow: auto;
   max-height: 400px;
 }
 
 .tree-view-output {
-  display: block;
-  background: #222;
-  color: #fff;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #202124;
   padding: 0;
-  font-size: 12px;
-  margin: 1px auto 10px auto;
+  margin: 0;
   position: relative;
   overflow: hidden;
-  border-radius: 10px;
+  height: 100%;
+  flex: 1;
+  min-height: 0; /* Important for nested flex containers */
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  pre {
+    background: #1e1e1e;
+    color: #e8eaed;
+  }
+
+  .tree-view-output {
+    background: #1e1e1e;
+    color: #e8eaed;
+  }
 }
 
 .debug-timetravel-panel {
@@ -47,7 +107,6 @@ pre {
   background: none;
   flex: 1;
   color: #fff;
-  font-size: 12px;
 }
 
 .debug-timetravel-panel-button:hover {
@@ -58,7 +117,6 @@ pre {
 .debug-timetravel-button {
   border: 0;
   padding: 0;
-  font-size: 12px;
   top: 10px;
   right: 15px;
   position: absolute;
@@ -74,7 +132,6 @@ pre {
 .debug-treetype-button {
   border: 0;
   padding: 0;
-  font-size: 12px;
   top: 10px;
   right: 85px;
   position: absolute;

@@ -66,7 +66,9 @@ function App({tabID}: Props) {
 
   // Get current editor states for selected editor
   const currentEditorStates = useMemo(() => {
-    if (!selectedEditorId) {return [];}
+    if (!selectedEditorId) {
+      return [];
+    }
     return timeStampedEditorStates.get(selectedEditorId) || [];
   }, [timeStampedEditorStates, selectedEditorId]);
 
@@ -216,23 +218,20 @@ function App({tabID}: Props) {
       page.
     </Alert>
   ) : (
-    <>
+    <Flex direction="column" height="100vh" overflow="hidden" bg="bg.primary">
       <Flex
         as="header"
-        position="fixed"
-        top="0"
-        backgroundColor="rgba(255, 255, 255, 0.97)"
-        backdropFilter="saturate(180%) blur(5px)"
-        w="100%"
-        boxShadow="md"
-        zIndex={99}
+        backgroundColor="bg.secondary"
+        borderBottom="1px solid"
+        borderBottomColor="border.default"
         alignItems="center"
         paddingX="2"
-        paddingY="2"
-        gap={3}
-        justifyContent="space-between">
+        paddingY="1"
+        gap={2}
+        justifyContent="space-between"
+        flexShrink={0}>
         <Flex alignItems="center" gap={2}>
-          <ButtonGroup variant="outline" spacing="2">
+          <ButtonGroup variant="outline" spacing="1" size="xs">
             <EditorInspectorButton
               tabID={tabID}
               setErrorMessage={setErrorMessage}
@@ -243,12 +242,12 @@ function App({tabID}: Props) {
             />
           </ButtonGroup>
           {editorStateMap === undefined ? (
-            <Text fontSize="xs" ml={2}>
+            <Text ml={2} color="text.secondary">
               Loading...
             </Text>
           ) : lexicalCount > 0 ? (
             <>
-              <Text fontSize="xs" fontWeight="medium" ml={2}>
+              <Text fontWeight="medium" ml={2} color="text.secondary">
                 Editor:
               </Text>
               <Select
@@ -266,16 +265,17 @@ function App({tabID}: Props) {
               </Select>
             </>
           ) : (
-            <Text fontSize="xs" ml={2}>
+            <Text ml={2} color="text.muted">
               No editors found
             </Text>
           )}
         </Flex>
         {lexicalCount > 0 && selectedEditorId && (
-          <ButtonGroup variant="outline" size="xs" spacing="2">
+          <ButtonGroup variant="outline" size="xs" spacing="1">
             <Button
               onClick={() => setShowExportDOM(!showExportDOM)}
-              colorScheme={showExportDOM ? 'blue' : 'gray'}>
+              colorScheme={showExportDOM ? 'blue' : undefined}
+              variant="outline">
               {showExportDOM ? 'Tree' : 'Export DOM'}
             </Button>
             {!timeTravelEnabled && isTimeTravelAvailable && (
@@ -289,7 +289,7 @@ function App({tabID}: Props) {
                     .setEditorReadOnly(selectedEditorId, true)
                     .catch((e) => setErrorMessage(e.stack));
                 }}
-                colorScheme="gray">
+                variant="outline">
                 Time Travel
               </Button>
             )}
@@ -304,7 +304,8 @@ function App({tabID}: Props) {
                     .setEditorReadOnly(selectedEditorId, false)
                     .catch((e) => setErrorMessage(e.stack));
                 }}
-                colorScheme="red">
+                colorScheme="red"
+                variant="solid">
                 Exit Time Travel
               </Button>
             )}
@@ -313,22 +314,19 @@ function App({tabID}: Props) {
       </Flex>
       {timeTravelEnabled && (
         <Flex
-          as="div"
-          position="fixed"
-          top="46px"
-          backgroundColor="#fafafa"
-          w="100%"
-          borderBottom="1px solid #e2e8f0"
-          zIndex={98}
+          backgroundColor="bg.secondary"
+          borderBottom="1px solid"
+          borderBottomColor="border.default"
           alignItems="center"
           justifyContent="center"
           paddingX="3"
           paddingY="0"
-          height="36px">
+          height="32px"
+          flexShrink={0}>
           <Flex alignItems="center" gap={3} width="100%" maxWidth="800px">
             <Button
               size="xs"
-              height="24px"
+              height="22px"
               onClick={() => {
                 if (!isPlaying && currentStateIndex === totalEditorStates - 1) {
                   // Reset to beginning if at the end
@@ -338,8 +336,7 @@ function App({tabID}: Props) {
               }}
               colorScheme={isPlaying ? 'orange' : 'blue'}
               variant="solid"
-              minWidth="55px"
-              fontSize="11px">
+              minWidth="50px">
               {isPlaying ? 'Pause' : 'Play'}
             </Button>
 
@@ -361,8 +358,8 @@ function App({tabID}: Props) {
                     appearance: 'none',
                     background:
                       totalEditorStates > 1
-                        ? `linear-gradient(to right, #3182ce ${((currentStateIndex - 1) / Math.max(1, totalEditorStates - 2)) * 100}%, #cbd5e0 ${((currentStateIndex - 1) / Math.max(1, totalEditorStates - 2)) * 100}%)`
-                        : '#cbd5e0',
+                        ? `linear-gradient(to right, var(--chakra-colors-accent-primary) ${((currentStateIndex - 1) / Math.max(1, totalEditorStates - 2)) * 100}%, var(--chakra-colors-border-default) ${((currentStateIndex - 1) / Math.max(1, totalEditorStates - 2)) * 100}%)`
+                        : 'var(--chakra-colors-border-default)',
                     borderRadius: '2px',
                     cursor: 'pointer',
                     height: '4px',
@@ -373,11 +370,10 @@ function App({tabID}: Props) {
               </Box>
 
               <Text
-                fontSize="11px"
                 fontWeight="medium"
                 minWidth="50px"
                 textAlign="center"
-                color="gray.600"
+                color="text.secondary"
                 whiteSpace="nowrap">
                 {currentStateIndex} / {totalEditorStates - 1}
               </Text>
@@ -385,12 +381,18 @@ function App({tabID}: Props) {
           </Flex>
         </Flex>
       )}
-      <Box as="main" mt={timeTravelEnabled ? '82px' : '50px'}>
+      <Box
+        as="main"
+        flex="1"
+        overflow="auto"
+        display="flex"
+        flexDirection="column"
+        bg="bg.primary">
         {errorMessage !== '' ? (
           <div className="card error">{errorMessage}</div>
         ) : null}
 
-        <Box pt={5}>
+        <Box flex="1" display="flex" flexDirection="column">
           {(() => {
             if (lexicalCount === 0) {
               return (
@@ -422,27 +424,25 @@ function App({tabID}: Props) {
                 : editorCurrentState;
 
             return (
-              <Box px={4}>
-                <TreeView
-                  viewClassName="tree-view-output"
-                  showExportDOM={showExportDOM}
-                  editorState={displayState as EditorState}
-                  getEditorStateJSON={() =>
-                    injectedPegasusService.getEditorStateJSON(selectedEditorId)
-                  }
-                  generateContent={(exportDOM) =>
-                    injectedPegasusService.generateTreeViewContent(
-                      selectedEditorId,
-                      exportDOM,
-                    )
-                  }
-                />
-              </Box>
+              <TreeView
+                viewClassName="tree-view-output"
+                showExportDOM={showExportDOM}
+                editorState={displayState as EditorState}
+                getEditorStateJSON={() =>
+                  injectedPegasusService.getEditorStateJSON(selectedEditorId)
+                }
+                generateContent={(exportDOM) =>
+                  injectedPegasusService.generateTreeViewContent(
+                    selectedEditorId,
+                    exportDOM,
+                  )
+                }
+              />
             );
           })()}
         </Box>
       </Box>
-    </>
+    </Flex>
   );
 }
 
