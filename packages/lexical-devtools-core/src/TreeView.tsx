@@ -423,10 +423,10 @@ function TreeNode({
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (hasChildren) {
-        setIsExpanded(!isExpanded);
+        setIsExpanded((prev) => !prev);
       }
     },
-    [setIsExpanded],
+    [hasChildren],
   );
 
   const handleNodeClick = useCallback(() => {
