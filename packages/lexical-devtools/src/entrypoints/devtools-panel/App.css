@@ -56,10 +56,6 @@ pre {
   line-height: 1.4;
   background: #ffffff;
   color: #202124;
-  margin: 0;
-  padding: 8px;
-  overflow: auto;
-  max-height: 400px;
 }
 
 .tree-view-output {
