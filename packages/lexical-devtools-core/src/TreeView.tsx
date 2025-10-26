@@ -474,17 +474,13 @@ function TreeNode({
         style={{
           alignItems: 'center',
           backgroundColor: backgroundColor,
-          borderBottomRightRadius: '2px',
           borderLeft:
             gutterColor !== 'transparent'
               ? `6px solid ${gutterColor}`
               : '6px solid transparent',
-          borderTopRightRadius: '2px',
           cursor: 'pointer',
           display: 'flex',
-          paddingBottom: '1px',
           paddingLeft: `${depth * indentSize}px`,
-          paddingTop: '1px',
           transition: 'background-color 0.1s, border-left-color 0.1s',
           userSelect: 'none',
           ['--tree-node-hover-bg' as string]: colors.hoverBg,
@@ -506,9 +502,9 @@ function TreeNode({
               display: 'inline-block',
               fontSize: '10px',
               marginRight: '4px',
-              padding: '2px',
+              marginTop: isExpanded ? '0px' : '-2px',
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-              transition: 'transform 0.15s',
+              transition: 'transform margin 0.15s',
             }}>
             ▶
           </span>
