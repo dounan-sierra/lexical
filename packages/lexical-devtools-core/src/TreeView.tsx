@@ -7,9 +7,9 @@
  */
 
 import type {LexicalCommandLog} from './useLexicalCommandsLog';
-import type {EditorState, NodeKey} from 'lexical';
 import type {JSX} from 'react';
 
+import {type EditorState, NODE_STATE_KEY, type NodeKey} from 'lexical';
 import {
   forwardRef,
   useCallback,
@@ -333,6 +333,7 @@ function EditorStateTree({
             selectedNodeKey={selectedNodeKey}
             onSelectNodeKey={setSelectedNodeKey}
             colors={colors}
+            isDarkMode={isDarkMode}
           />
         </div>
       </div>
@@ -373,7 +374,6 @@ function EditorStateTree({
           minWidth: 0,
           overflow: selectedNodeKey ? 'auto' : 'hidden',
           padding: '8px',
-          userSelect: 'text',
         }}>
         {selectedNodeKey ? (
           <NodeDetailsPanel
@@ -388,7 +388,6 @@ function EditorStateTree({
               cursor: 'default',
               marginTop: '20px',
               textAlign: 'center',
-              userSelect: 'none',
             }}>
             Click a node to see details
           </div>
@@ -404,12 +403,14 @@ function TreeNode({
   selectedNodeKey,
   onSelectNodeKey,
   colors,
+  isDarkMode,
 }: {
   node: SerializedNode;
   depth?: number;
   selectedNodeKey?: NodeKey | null;
   onSelectNodeKey?: (n: NodeKey) => void;
   colors: ThemeColors;
+  isDarkMode: boolean;
 }): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren =
@@ -482,7 +483,6 @@ function TreeNode({
           display: 'flex',
           paddingLeft: `${depth * indentSize}px`,
           transition: 'background-color 0.1s, border-left-color 0.1s',
-          userSelect: 'none',
           ['--tree-node-hover-bg' as string]: colors.hoverBg,
         }}>
         {hasChildren && (
@@ -521,6 +521,47 @@ function TreeNode({
           }}>
           {node.type || 'unknown'}
         </span>
+        {'__key' in node && typeof node.__key === 'string' && node.__key ? (
+          <span
+            style={{
+              backgroundColor: isDarkMode
+                ? 'rgba(255, 255, 255, 0.03)'
+                : 'rgba(0, 0, 0, 0.03)',
+              borderRadius: '3px',
+              color: colors.textSecondary,
+              font: 'mono',
+              fontSize: '9px',
+              marginLeft: '6px',
+              opacity: 0.8,
+              paddingLeft: '3px',
+              paddingRight: '3px',
+            }}>
+            {node.__key}
+          </span>
+        ) : null}
+        {NODE_STATE_KEY in node &&
+        typeof node[NODE_STATE_KEY] === 'object' &&
+        node[NODE_STATE_KEY] &&
+        'uuid' in node[NODE_STATE_KEY] &&
+        typeof node[NODE_STATE_KEY].uuid === 'string' &&
+        node[NODE_STATE_KEY].uuid ? (
+          <span
+            style={{
+              backgroundColor: isDarkMode
+                ? 'rgba(255, 255, 255, 0.03)'
+                : 'rgba(0, 0, 0, 0.03)',
+              borderRadius: '3px',
+              color: colors.textSecondary,
+              font: 'mono',
+              fontSize: '9px',
+              marginLeft: '6px',
+              opacity: 0.8,
+              paddingLeft: '3px',
+              paddingRight: '3px',
+            }}>
+            {node[NODE_STATE_KEY].uuid}
+          </span>
+        ) : null}
         {'text' in node && typeof node.text === 'string' && node.text ? (
           <span
             style={{
@@ -544,6 +585,7 @@ function TreeNode({
               selectedNodeKey={selectedNodeKey}
               onSelectNodeKey={onSelectNodeKey}
               colors={colors}
+              isDarkMode={isDarkMode}
             />
           ))}
         </div>
@@ -703,7 +745,6 @@ function PropertyViewer({
           paddingBottom: '1px',
           paddingLeft: `${level * indentSize}px`,
           paddingTop: '1px',
-          userSelect: isExpandable ? 'none' : 'text',
         }}>
         {isExpandable && (
           <span
