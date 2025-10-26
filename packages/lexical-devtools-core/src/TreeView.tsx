@@ -156,7 +156,7 @@ export const TreeView = forwardRef<
           }}>
           <EditorStateTree
             serializedEditorState={serializedEditorState}
-            content={content}
+            exportedDOM={showExportDOM ? content : undefined}
           />
         </div>
       )}
@@ -202,10 +202,10 @@ type ThemeColors = {
 
 function EditorStateTree({
   serializedEditorState,
-  content,
+  exportedDOM,
 }: {
   serializedEditorState: {[key: string]: unknown};
-  content: string;
+  exportedDOM: string | undefined;
 }): JSX.Element {
   const rootNode = serializedEditorState.root;
   const [selectedNode, setSelectedNode] = useState<SerializedNode | null>(null);
@@ -313,6 +313,10 @@ function EditorStateTree({
     );
   }
 
+  if (exportedDOM) {
+    return <pre>{exportedDOM}</pre>;
+  }
+
   return (
     <div
       ref={containerRef}
@@ -327,7 +331,7 @@ function EditorStateTree({
         top: 0,
         userSelect: isDragging ? 'none' : 'auto',
       }}>
-      {/* Left panel - Tree and Original Content */}
+      {/* Left panel - Tree */}
       <div
         style={{
           display: 'flex',
@@ -337,53 +341,23 @@ function EditorStateTree({
           width: `${leftPanelWidth}%`,
         }}>
         {/* Interactive Tree */}
-        <div
-          style={{
-            borderBottom: `1px solid ${colors.border}`,
-            flex: '0 0 50%',
-            position: 'relative',
-          }}>
-          <div
-            style={{
-              bottom: 0,
-              left: 0,
-              overflow: 'auto',
-              padding: '8px',
-              position: 'absolute',
-              right: 0,
-              top: 0,
-            }}>
-            <TreeNode
-              node={rootNode}
-              selectedNode={selectedNode}
-              onSelectNode={setSelectedNode}
-              colors={colors}
-            />
-          </div>
-        </div>
 
-        {/* Original Content */}
         <div
           style={{
-            flex: 1,
-            position: 'relative',
+            bottom: 0,
+            left: 0,
+            overflow: 'auto',
+            padding: '8px',
+            position: 'absolute',
+            right: 0,
+            top: 0,
           }}>
-          <pre
-            style={{
-              backgroundColor: 'transparent',
-              bottom: 0,
-              color: colors.text,
-              left: 0,
-              lineHeight: '1.4',
-              margin: 0,
-              overflow: 'auto',
-              padding: '8px',
-              position: 'absolute',
-              right: 0,
-              top: 0,
-            }}>
-            {content}
-          </pre>
+          <TreeNode
+            node={rootNode}
+            selectedNode={selectedNode}
+            onSelectNode={setSelectedNode}
+            colors={colors}
+          />
         </div>
       </div>
 
@@ -556,6 +530,18 @@ function TreeNode({
           }}>
           {node.type || 'unknown'}
         </span>
+        {'text' in node && typeof node.text === 'string' && node.text ? (
+          <span
+            style={{
+              color: colors.textSecondary,
+              marginLeft: '8px',
+              opacity: 0.8,
+            }}>
+            {node.text.length > 50
+              ? `"${node.text.substring(0, 50)}..."`
+              : `"${node.text}"`}
+          </span>
+        ) : null}
       </div>
       {isExpanded && hasChildren && (
         <div>
