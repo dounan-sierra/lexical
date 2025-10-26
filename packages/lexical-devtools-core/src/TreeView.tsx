@@ -194,7 +194,7 @@ function EditorStateTree({
 }): JSX.Element {
   const rootNode = serializedEditorState.root;
   const [selectedNodeKey, setSelectedNodeKey] = useState<NodeKey | null>(null);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
+  const [leftPanelWidth, setLeftPanelWidth] = useState(60); // percentage
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDarkMode =
