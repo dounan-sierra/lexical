@@ -85,6 +85,15 @@ pre {
   }
 }
 
+/* TreeView hover styles */
+.tree-node:not(.tree-node-selected):hover {
+  background-color: var(--tree-node-hover-bg) !important;
+}
+
+.resize-handle:not(.resize-handle-dragging):hover {
+  background-color: var(--resize-handle-hover-bg) !important;
+}
+
 .debug-timetravel-panel {
   overflow: hidden;
   padding: 0 0 10px 0;

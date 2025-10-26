@@ -7,7 +7,7 @@
  */
 
 import type {LexicalCommandLog} from './useLexicalCommandsLog';
-import type {EditorState} from 'lexical';
+import type {EditorState, NodeKey} from 'lexical';
 import type {JSX} from 'react';
 
 import {
@@ -49,8 +49,6 @@ export const TreeView = forwardRef<
   >(undefined);
   const [isLimited, setIsLimited] = useState(false);
   const [showLimited, setShowLimited] = useState(false);
-  const lastEditorStateRef = useRef<null | EditorState>(null);
-  const lastCommandsLogRef = useRef<LexicalCommandLog>(commandsLog);
   const lastGenerationID = useRef(0);
 
   const generateTree = useCallback(
@@ -93,28 +91,12 @@ export const TreeView = forwardRef<
         return;
       }
     }
-
-    // Update view when either editor state changes or new commands are logged
-    const shouldUpdate =
-      lastEditorStateRef.current !== editorState ||
-      lastCommandsLogRef.current !== commandsLog;
-
-    if (shouldUpdate) {
-      lastEditorStateRef.current = editorState;
-      lastCommandsLogRef.current = commandsLog;
-      generateTree(showExportDOM);
-    }
+    generateTree(showExportDOM);
   }, [editorState, generateTree, showExportDOM, showLimited, commandsLog]);
 
-  useEffect(() => {
-    generateTree(showExportDOM);
-  }, [showExportDOM, generateTree]);
-
-  const [isDarkMode] = useState(
-    () =>
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches,
-  );
+  const isDarkMode =
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   // Define button colors based on theme
   const buttonColors = {
@@ -190,6 +172,9 @@ type ThemeColors = {
   dragHandle: string;
   dragHandleHover: string;
   hoverBg: string;
+  lexicalSelectedBg: string;
+  lexicalSelectedAnchorBg: string;
+  lexicalSelectedFocusBg: string;
   nodeNames: string;
   nullValues: string;
   numberValues: string;
@@ -208,30 +193,13 @@ function EditorStateTree({
   exportedDOM: string | undefined;
 }): JSX.Element {
   const rootNode = serializedEditorState.root;
-  const [selectedNode, setSelectedNode] = useState<SerializedNode | null>(null);
+  const [selectedNodeKey, setSelectedNodeKey] = useState<NodeKey | null>(null);
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // percentage
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDarkMode, setIsDarkMode] = useState(
-    () =>
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches,
-  );
-
-  // Listen for theme changes
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    } else {
-      // Fallback for older browsers
-      mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
-    }
-  }, []);
+  const isDarkMode =
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   // Define theme colors based on mode
   const colors = useMemo(
@@ -248,6 +216,11 @@ function EditorStateTree({
         ? 'rgba(74, 144, 226, 0.3)'
         : 'rgba(26, 115, 232, 0.3)',
       hoverBg: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      lexicalSelectedAnchorBg: isDarkMode ? '#a8cc8c' : '#22863a',
+      lexicalSelectedBg: isDarkMode
+        ? 'rgba(97, 218, 251, 0.5)'
+        : 'rgba(26, 115, 232, 0.35)',
+      lexicalSelectedFocusBg: isDarkMode ? '#f48771' : '#d73a49',
       nodeNames: isDarkMode ? '#9cdcfe' : '#0d47a1',
       nullValues: isDarkMode ? '#9aa0a6' : '#6a737d',
       numberValues: isDarkMode ? '#e9c062' : '#e36209',
@@ -262,10 +235,13 @@ function EditorStateTree({
     [isDarkMode],
   );
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    },
+    [setIsDragging],
+  );
 
   useEffect(() => {
     if (!isDragging) {
@@ -301,7 +277,7 @@ function EditorStateTree({
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
     };
-  }, [isDragging]);
+  }, [isDragging, setLeftPanelWidth]);
 
   // Use the type guard to refine the type
   if (!isSerializedNode(rootNode)) {
@@ -354,8 +330,8 @@ function EditorStateTree({
           }}>
           <TreeNode
             node={rootNode}
-            selectedNode={selectedNode}
-            onSelectNode={setSelectedNode}
+            selectedNodeKey={selectedNodeKey}
+            onSelectNodeKey={setSelectedNodeKey}
             colors={colors}
           />
         </div>
@@ -363,6 +339,7 @@ function EditorStateTree({
 
       {/* Resize handle */}
       <div
+        className={`resize-handle ${isDragging ? 'resize-handle-dragging' : ''}`}
         onMouseDown={handleMouseDown}
         style={{
           alignItems: 'center',
@@ -376,16 +353,7 @@ function EditorStateTree({
           transition: isDragging ? 'none' : 'background-color 0.2s',
           width: '5px',
           zIndex: 10,
-        }}
-        onMouseEnter={(e) => {
-          if (!isDragging) {
-            e.currentTarget.style.backgroundColor = colors.dragHandleHover;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isDragging) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }
+          ['--resize-handle-hover-bg' as string]: colors.dragHandleHover,
         }}>
         <div
           style={{
@@ -403,12 +371,16 @@ function EditorStateTree({
           cursor: 'text',
           flex: 1,
           minWidth: 0,
-          overflow: selectedNode ? 'auto' : 'hidden',
+          overflow: selectedNodeKey ? 'auto' : 'hidden',
           padding: '8px',
           userSelect: 'text',
         }}>
-        {selectedNode ? (
-          <NodeDetailsPanel node={selectedNode} colors={colors} />
+        {selectedNodeKey ? (
+          <NodeDetailsPanel
+            rootNode={rootNode}
+            nodeKey={selectedNodeKey}
+            colors={colors}
+          />
         ) : (
           <div
             style={{
@@ -429,14 +401,14 @@ function EditorStateTree({
 function TreeNode({
   node,
   depth = 0,
-  selectedNode,
-  onSelectNode,
+  selectedNodeKey,
+  onSelectNodeKey,
   colors,
 }: {
   node: SerializedNode;
   depth?: number;
-  selectedNode?: SerializedNode | null;
-  onSelectNode?: (n: SerializedNode) => void;
+  selectedNodeKey?: NodeKey | null;
+  onSelectNodeKey?: (n: NodeKey) => void;
   colors: ThemeColors;
 }): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -445,24 +417,51 @@ function TreeNode({
     Array.isArray(node.children) &&
     node.children.length > 0;
   const indentSize = 16; // pixels per indent level
-  const isSelected = selectedNode === node;
+  const isSelected = selectedNodeKey === node.__key;
 
-  const handleCaretClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (hasChildren) {
-      setIsExpanded(!isExpanded);
-    }
-  };
+  const handleCaretClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (hasChildren) {
+        setIsExpanded(!isExpanded);
+      }
+    },
+    [setIsExpanded],
+  );
 
-  const handleNodeClick = () => {
-    if (onSelectNode) {
-      onSelectNode(node);
+  const handleNodeClick = useCallback(() => {
+    if (onSelectNodeKey) {
+      onSelectNodeKey(node.__key as NodeKey);
     }
-  };
+  }, [onSelectNodeKey, node]);
+
+  const getGutterColor = useCallback(() => {
+    const isLexicalSelected =
+      '__isSelected' in node && node.__isSelected === true;
+    const isLexicalSelectedAnchor =
+      '__isSelectedAnchor' in node && node.__isSelectedAnchor === true;
+    const isLexicalSelectedFocus =
+      '__isSelectedFocus' in node && node.__isSelectedFocus === true;
+
+    if (isLexicalSelectedAnchor) {
+      return colors.lexicalSelectedAnchorBg;
+    }
+    if (isLexicalSelectedFocus) {
+      return colors.lexicalSelectedFocusBg;
+    }
+    if (isLexicalSelected) {
+      return colors.lexicalSelectedBg;
+    }
+    return 'transparent';
+  }, [node, colors]);
+
+  const gutterColor = getGutterColor();
+  const backgroundColor = isSelected ? colors.selectedBg : 'transparent';
 
   return (
     <div>
       <div
+        className={`tree-node ${isSelected ? 'tree-node-selected' : ''}`}
         onClick={handleNodeClick}
         role="button"
         tabIndex={0}
@@ -474,25 +473,21 @@ function TreeNode({
         }}
         style={{
           alignItems: 'center',
-          backgroundColor: isSelected ? colors.selectedBg : 'transparent',
-          borderRadius: '2px',
+          backgroundColor: backgroundColor,
+          borderBottomRightRadius: '2px',
+          borderLeft:
+            gutterColor !== 'transparent'
+              ? `6px solid ${gutterColor}`
+              : '6px solid transparent',
+          borderTopRightRadius: '2px',
           cursor: 'pointer',
           display: 'flex',
           paddingBottom: '1px',
           paddingLeft: `${depth * indentSize}px`,
           paddingTop: '1px',
-          transition: 'background-color 0.1s',
+          transition: 'background-color 0.1s, border-left-color 0.1s',
           userSelect: 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.backgroundColor = colors.hoverBg;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }
+          ['--tree-node-hover-bg' as string]: colors.hoverBg,
         }}>
         {hasChildren && (
           <span
@@ -550,8 +545,8 @@ function TreeNode({
               key={index}
               node={childNode}
               depth={depth + 1}
-              selectedNode={selectedNode}
-              onSelectNode={onSelectNode}
+              selectedNodeKey={selectedNodeKey}
+              onSelectNodeKey={onSelectNodeKey}
               colors={colors}
             />
           ))}
@@ -561,14 +556,40 @@ function TreeNode({
   );
 }
 
+function findNode(
+  node: SerializedNode,
+  nodeKey: NodeKey,
+): SerializedNode | undefined {
+  if (node.__key === nodeKey) {
+    return node;
+  }
+  if (node.children && Array.isArray(node.children)) {
+    for (const child of node.children) {
+      const found = findNode(child, nodeKey);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return undefined;
+}
+
 function NodeDetailsPanel({
-  node,
+  rootNode,
+  nodeKey,
   colors,
 }: {
-  node: SerializedNode;
+  rootNode: SerializedNode;
+  nodeKey: NodeKey;
   colors: ThemeColors;
 }): JSX.Element {
   const properties: Array<[string, unknown]> = [];
+
+  const node = useMemo(() => findNode(rootNode, nodeKey), [rootNode, nodeKey]);
+
+  if (!node) {
+    return <div style={{color: colors.textSecondary}}>Node not found</div>;
+  }
 
   // Collect all properties except children
   for (const [key, value] of Object.entries(node)) {
