@@ -6,7 +6,11 @@
  *
  */
 
-import {generateContent, LexicalCommandLog,toEditorStateJSON} from '@lexical/devtools-core';
+import {
+  generateContent,
+  LexicalCommandLog,
+  toEditorStateJSON,
+} from '@lexical/devtools-core';
 import {IPegasusRPCService, PegasusRPCMessage} from '@webext-pegasus/rpc';
 import {LexicalEditor} from 'lexical';
 import {StoreApi} from 'zustand';
@@ -24,6 +28,12 @@ import {
 } from './utils/queryLexicalByKey';
 
 const ELEMENT_PICKER_STYLE = {borderColor: '#0000ff'};
+
+declare global {
+  interface Window {
+    tempLexicalEditor?: LexicalEditor;
+  }
+}
 
 export type IInjectedPegasusService = InstanceType<
   typeof InjectedPegasusService
@@ -102,6 +112,21 @@ export class InjectedPegasusService
     } else {
       this.activatePicker();
     }
+  }
+
+  saveEditorAsGlobalVariable(
+    _message: PegasusRPCMessage,
+    editorKey: string,
+  ): void {
+    const editor = queryLexicalEditorByKey(editorKey);
+    if (editor == null) {
+      throw new Error(`Can't find editor with key: ${editorKey}`);
+    }
+
+    // Save the editor to window.tempLexicalEditor for console access
+    window.tempLexicalEditor = editor;
+    // eslint-disable-next-line no-console
+    console.info('✅ Lexical editor saved as `window.tempLexicalEditor`');
   }
 
   private activatePicker(): void {

@@ -263,6 +263,21 @@ function App({tabID}: Props) {
                   </option>
                 ))}
               </Select>
+              {selectedEditorId && (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    injectedPegasusService
+                      .saveEditorAsGlobalVariable(selectedEditorId)
+                      .catch((err) => {
+                        setErrorMessage(err.message);
+                        console.error(err);
+                      });
+                  }}>
+                  Save as global variable
+                </Button>
+              )}
             </>
           ) : (
             <Text ml={2} color="text.muted">
